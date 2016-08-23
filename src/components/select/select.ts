@@ -10,7 +10,7 @@ import {CommonModule} from "@angular/common";
 import {MdInputModule} from "@angular2-material/input";
 import {MdIconModule} from "@angular2-material/icon";
 import {OESelectService, OESelectedItem} from "./select.service";
-import {Utils} from "../../../core/utils/funcs";
+import {Utils} from "../../utils/funcs";
 
 
 @Component({

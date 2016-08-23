@@ -1,5 +1,5 @@
 import {Injectable, EventEmitter} from "@angular/core";
-import {Utils} from "../../../core/utils/funcs";
+import {Utils} from "../../utils/funcs";
 /**
  * Created by mleader1 on 23/08/2016.
  */
