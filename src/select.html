@@ -1,0 +1,17 @@
+<div class="oe-select__wrapper" [ngClass]="{'disabled':disabled}">
+    <md-input placeholder="{{selectedText || placeHolder}}" [disabled]="disabled" class="oe-select-prime"
+              [floatingPlaceholder]="false"
+              (click)="show()">
+        <span md-suffix><md-icon>keyboard_arrow_down</md-icon></span>
+    </md-input>
+    <div class="oe-select-options__wrapper">
+        <md-card class="oe-select-options" flex layout="column" [ngClass]="{'active':showItems}">
+            <ng-content select="oe-option"></ng-content>
+            <oe-option *ngFor="let item of items" [item]="item" [value]="item[valueBinding]"
+                       [isSelected]="item[stateBinding]" [text]="item[textBinding]"
+                       (onItemToggled)="onItemToggled($event)"></oe-option>
+            <oe-option text="Clear" [isUnselectAllAction]="true"
+                       (onItemToggled)="onItemToggled($event)"></oe-option>
+        </md-card>
+    </div>
+</div>

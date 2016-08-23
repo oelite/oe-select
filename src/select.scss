@@ -1,0 +1,52 @@
+@import "~@angular2-material/core/style/default-theme";
+
+oe-select {
+  min-width: 42px;
+  .oe-select__wrapper {
+    position: relative;
+    .oe-select-prime {
+      md-icon, input, div, label {
+        cursor: pointer;
+        color: md-color($md-light-theme-foreground, text) !important;
+      }
+    }
+    &.disabled {
+      md-icon, input, div, label {
+        color: md-color($md-light-theme-foreground, disabled) !important;
+        cursor: default;
+      }
+    }
+    .oe-select__wrapper {
+      pointer-events: none;
+    }
+    .oe-select-options {
+      position: absolute;
+      min-width: 100%;
+      top: 0;
+      z-index: 9998;
+      opacity: 0;
+      transition: opacity .2s, ease-in-out .1s, transform .3s;
+      transform: scale(0);
+      &.active {
+        opacity: 1;
+        overflow: visible;
+        transform: scale(1);
+        transform-origin: 0 0;
+      }
+      padding: 0;
+      margin: 0;
+      .oe-select-option {
+        padding: 8px 14px;
+        line-height: 24px;
+        cursor: pointer;
+        &:hover, &.selected {
+          background: md-color($md-light-theme-background, hover);
+        }
+        &.actionBar {
+          border-top: 1px solid rgba(black, 0.12);
+          background: md-color($md-light-theme-background, app-bar);
+        }
+      }
+    }
+  }
+}

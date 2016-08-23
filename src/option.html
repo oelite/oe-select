@@ -1,0 +1,5 @@
+<div flex layout="row" class="oe-select-option" (click)="toggleSelect($event)"
+     [ngClass]="{'selected':isSelected,'actionBar':isUnselectAllAction}">
+    <span *ngIf="!isUnselectAllAction">{{text ? text:'Unnamed item' }}</span>
+    <span *ngIf="isUnselectAllAction" flex-auto [ngClass]="{'text-center':isUnselectAllAction}">Deselect All</span>
+</div>
