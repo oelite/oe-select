@@ -1,3 +1,7 @@
+# Dropdown Component for Angular 2 (with Google Material 2)
+<img src="demo/screenshot1.png" style="width:100%"/>
+<img src="demo/screenshot2.png" style="width:100%"/>
+<img src="demo/screenshot3.png" style="width:100%"/>
 ### Dependencies
 
 * Google Material (Angular Material 2) - MdInputModule, MdIconModule
