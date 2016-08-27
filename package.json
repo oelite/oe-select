@@ -1,6 +1,6 @@
 {
   "name": "oe-select",
-  "version": "1.0.6",
+  "version": "1.0.7",
   "description": "dropdown component for Angular 2, with Google Material 2 utilised",
   "main": "index.js",
   "repository": {

@@ -57,11 +57,13 @@ var OESelectService = (function () {
     };
     OESelectService.prototype.registerSelector = function (selectorId, allowMultipleSelect, selectedItems) {
         if (selectorId) {
+            var newSelector = new OESelectorState(selectorId, selectedItems, allowMultipleSelect);
             var selector = this.getSelector(selectorId);
-            if (selector)
-                console.warn('[OE Selector - Warning] a duplicated selector registration is identified - id:' + selectorId);
+            if (selector) {
+                console.warn('[OE Selector - Warning] a duplicated selector registration is identified - id:' + selectorId + "; it will now be overwritten.");
+                this.selectors[this.selectors.indexOf(selector)] = newSelector;
+            }
             else {
-                var newSelector = new OESelectorState(selectorId, selectedItems, allowMultipleSelect);
                 this.selectors.push(newSelector);
             }
         }

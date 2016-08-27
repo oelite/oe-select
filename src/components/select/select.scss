@@ -7,6 +7,9 @@ oe-select {
     .oe-select-prime {
       md-icon, input, div, label {
         cursor: pointer;
+        &.md-input-wrapper {
+          margin: 0 !important;
+        }
         color: md-color($md-light-theme-foreground, text) !important;
       }
     }
@@ -18,6 +21,8 @@ oe-select {
     }
     .oe-select__wrapper {
       pointer-events: none;
+      position: relative;
+
     }
     .oe-select-options {
       position: absolute;
@@ -35,16 +40,20 @@ oe-select {
       }
       padding: 0;
       margin: 0;
-      .oe-select-option {
-        padding: 8px 14px;
-        line-height: 24px;
+      oe-option {
         cursor: pointer;
-        &:hover, &.selected {
-          background: md-color($md-light-theme-background, hover);
-        }
-        &.actionBar {
-          border-top: 1px solid rgba(black, 0.12);
-          background: md-color($md-light-theme-background, app-bar);
+
+        .oe-select-option {
+          padding: 8px 14px;
+          line-height: 24px;
+          cursor: pointer;
+          &:hover, &.selected {
+            background: md-color($md-light-theme-background, hover);
+          }
+          &.actionBar {
+            border-top: 1px solid rgba(black, 0.12);
+            background: md-color($md-light-theme-background, app-bar);
+          }
         }
       }
     }

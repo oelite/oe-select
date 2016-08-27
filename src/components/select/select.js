@@ -19,6 +19,9 @@ var OESelectOptionComponent = (function () {
         var _this = this;
         this.selectService = selectService;
         this.el = el;
+        this.valueBinding = "id";
+        this.textBinding = "name";
+        this.stateBinding = "selected";
         this.onItemToggled = new core_1.EventEmitter();
         this.uid = funcs_1.Utils.NewGuid();
         selectService.onItemRemoved$.subscribe(function (item) {
@@ -35,6 +38,8 @@ var OESelectOptionComponent = (function () {
         });
     }
     OESelectOptionComponent.prototype.ngOnInit = function () {
+        if (!this.item)
+            this.item = { uid: this.uid };
         var item = this.selectService.getSelectedItems(this.selectorId, this.uid);
         if (item && item.length) {
             this.isSelected = true;
@@ -42,17 +47,25 @@ var OESelectOptionComponent = (function () {
         }
     };
     OESelectOptionComponent.prototype.toggleSelect = function () {
+        var selector = this.selectService.getSelector(this.selectorId);
         if (!(this.isSelected || this.isUnselectAllAction)) {
             this.isSelected = true;
-            this.item[this.stateBinding] = true;
+            if (this.item) {
+                this.item[this.stateBinding] = true;
+                this.item[this.valueBinding] = this.value;
+                this.item[this.textBinding] = this.text;
+            }
             this.selectService.registerSelectedItem(this.selectorId, this.uid, this.value, this.text, this.item);
         }
         else {
-            var selector = this.selectService.getSelector(this.selectorId);
             if (!this.isUnselectAllAction) {
                 if (selector && selector.allowMultipleSelect && !this.isUnselectAllAction) {
                     this.isSelected = false;
-                    this.item[this.stateBinding] = false;
+                    if (this.item) {
+                        this.item[this.stateBinding] = false;
+                        this.item[this.valueBinding] = this.value;
+                        this.item[this.textBinding] = this.text;
+                    }
                     this.selectService.deregisterSelectedItem(this.selectorId, this.uid, this.value, this.text, this.item);
                 }
             }
@@ -60,7 +73,10 @@ var OESelectOptionComponent = (function () {
                 this.selectService.clearSelectorItems(selector);
             }
         }
-        this.onItemToggled.emit({ uid: this.uid, value: this.value, item: this.item, text: this.text });
+        var scope = this;
+        setTimeout(function () {
+            scope.onItemToggled.emit({ uid: this.uid, value: this.value, item: this.item, text: this.text });
+        }, 100);
     };
     __decorate([
         core_1.Input()
@@ -77,6 +93,9 @@ var OESelectOptionComponent = (function () {
     __decorate([
         core_1.Input()
     ], OESelectOptionComponent.prototype, "isUnselectAllAction");
+    __decorate([
+        core_1.Input()
+    ], OESelectOptionComponent.prototype, "selectorId");
     __decorate([
         core_1.Output()
     ], OESelectOptionComponent.prototype, "onItemToggled");
@@ -98,51 +117,61 @@ var OESelectComponent = (function () {
         this.textBinding = 'name';
         this.valueBinding = 'id';
         this.stateBinding = 'selected';
+        this.allowMultiple = false;
         this.onItemSelected = new core_1.EventEmitter();
         this.onItemDeselected = new core_1.EventEmitter();
-        this.selectorId = funcs_1.Utils.NewGuid();
         this.selectService.onItemSelected$.subscribe(function (item) {
             var scope = _this;
             setTimeout(function () {
+                scope.validateSelections();
                 scope.onItemSelected.emit(item);
             }, 100);
         });
         this.selectService.onItemRemoved$.subscribe(function (item) {
             var scope = _this;
             setTimeout(function () {
+                scope.validateSelections();
                 scope.onItemDeselected.emit(item);
             }, 100);
         });
     }
     OESelectComponent.prototype.ngOnInit = function () {
+        if (!this.selectorId)
+            this.selectorId = funcs_1.Utils.NewGuid();
         this.selectService.registerSelector(this.selectorId, this.allowMultiple);
     };
     OESelectComponent.prototype.ngAfterViewInit = function () {
         var _this = this;
-        this.dynamicArrayChildren.forEach(function (item) {
+        this.viewChildrenSource.forEach(function (item) {
             _this.configureChildOptionComponent(item);
         });
     };
     OESelectComponent.prototype.ngAfterContentInit = function () {
         var _this = this;
-        this.manualChildren.forEach(function (item) {
+        this.contentChildrenSource.forEach(function (item) {
             _this.configureChildOptionComponent(item);
         });
     };
     OESelectComponent.prototype.configureChildOptionComponent = function (itemComponent) {
         if (!itemComponent.item) {
-            itemComponent.item = {};
+            itemComponent.item = { uid: itemComponent.uid };
             itemComponent.valueBinding = this.valueBinding;
             itemComponent.textBinding = this.textBinding;
             itemComponent.stateBinding = this.stateBinding;
-            itemComponent.item[this.valueBinding] = itemComponent.value;
-            itemComponent.item[this.textBinding] = itemComponent.text;
-            itemComponent.item[this.stateBinding] = itemComponent.isSelected;
+            if (this.valueBinding)
+                itemComponent.item[this.valueBinding] = itemComponent.value;
+            if (this.textBinding)
+                itemComponent.item[this.textBinding] = itemComponent.text;
+            if (this.stateBinding)
+                itemComponent.item[this.stateBinding] = itemComponent.isSelected;
         }
         else {
-            itemComponent.value = itemComponent.item[this.valueBinding];
-            itemComponent.text = itemComponent.item[this.textBinding];
-            itemComponent.isSelected = itemComponent.item[this.stateBinding];
+            if (this.valueBinding)
+                itemComponent.value = itemComponent.item[this.valueBinding];
+            if (this.textBinding)
+                itemComponent.text = itemComponent.item[this.textBinding];
+            if (this.stateBinding)
+                itemComponent.isSelected = itemComponent.item[this.stateBinding];
         }
         itemComponent.selectorId = this.selectorId;
         if (itemComponent.isSelected && !itemComponent.isUnselectAllAction) {
@@ -179,7 +208,7 @@ var OESelectComponent = (function () {
         enumerable: true,
         configurable: true
     });
-    OESelectComponent.prototype.onItemToggled = function (event) {
+    OESelectComponent.prototype.validateSelections = function () {
         var selectedItems = this.selectService.getSelectedItems(this.selectorId);
         if (selectedItems && selectedItems.length) {
             if (!this.allowMultiple) {
@@ -187,8 +216,9 @@ var OESelectComponent = (function () {
                 this.close();
             }
             else {
-                if (selectedItems.length > 1)
+                if (selectedItems.length > 1) {
                     this.selectedText = "(multiple selected)";
+                }
                 else
                     this.selectedText = selectedItems[0].text || ' ';
             }
@@ -200,10 +230,10 @@ var OESelectComponent = (function () {
     };
     __decorate([
         core_1.ViewChildren(OESelectOptionComponent)
-    ], OESelectComponent.prototype, "dynamicArrayChildren");
+    ], OESelectComponent.prototype, "viewChildrenSource");
     __decorate([
         core_1.ContentChildren(OESelectOptionComponent)
-    ], OESelectComponent.prototype, "manualChildren");
+    ], OESelectComponent.prototype, "contentChildrenSource");
     __decorate([
         core_1.Input()
     ], OESelectComponent.prototype, "placeHolder");
@@ -225,6 +255,9 @@ var OESelectComponent = (function () {
     __decorate([
         core_1.Input()
     ], OESelectComponent.prototype, "allowMultiple");
+    __decorate([
+        core_1.Input()
+    ], OESelectComponent.prototype, "selectorId");
     __decorate([
         core_1.Output()
     ], OESelectComponent.prototype, "onItemSelected");

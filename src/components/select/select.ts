@@ -29,12 +29,13 @@ export class OESelectOptionComponent {
     text: string;
     @Input()
     isUnselectAllAction: boolean;
+    @Input()
+    selectorId: string;
 
     uid: string;
-    selectorId: string;
-    valueBinding: string;
-    textBinding: string;
-    stateBinding: string;
+    valueBinding: string = "id";
+    textBinding: string = "name";
+    stateBinding: string = "selected";
 
     @Output()
     onItemToggled: EventEmitter<any> = new EventEmitter<any>();
@@ -58,6 +59,9 @@ export class OESelectOptionComponent {
     }
 
     ngOnInit() {
+        if (!this.item)
+            this.item = {uid: this.uid};
+
         var item = this.selectService.getSelectedItems(this.selectorId, this.uid);
         if (item && item.length) {
             this.isSelected = true;
@@ -66,17 +70,27 @@ export class OESelectOptionComponent {
     }
 
     toggleSelect() {
+        var selector = this.selectService.getSelector(this.selectorId);
         if (!(this.isSelected || this.isUnselectAllAction)) {
             this.isSelected = true;
-            this.item[this.stateBinding] = true;
+
+            if (this.item) {
+                this.item[this.stateBinding] = true;
+                this.item[this.valueBinding] = this.value;
+                this.item[this.textBinding] = this.text;
+            }
             this.selectService.registerSelectedItem(this.selectorId, this.uid, this.value, this.text, this.item);
         }
         else {
-            var selector = this.selectService.getSelector(this.selectorId);
             if (!this.isUnselectAllAction) {
                 if (selector && selector.allowMultipleSelect && !this.isUnselectAllAction) {
                     this.isSelected = false;
-                    this.item[this.stateBinding] = false;
+                    if (this.item) {
+                        this.item[this.stateBinding] = false;
+                        this.item[this.valueBinding] = this.value;
+                        this.item[this.textBinding] = this.text;
+                    }
+
                     this.selectService.deregisterSelectedItem(this.selectorId, this.uid, this.value, this.text, this.item);
                 }
             }
@@ -84,7 +98,11 @@ export class OESelectOptionComponent {
                 this.selectService.clearSelectorItems(selector);
             }
         }
-        this.onItemToggled.emit({uid: this.uid, value: this.value, item: this.item, text: this.text});
+        var scope = this;
+        setTimeout(function () {
+            scope.onItemToggled.emit({uid: this.uid, value: this.value, item: this.item, text: this.text});
+        }, 100);
+
     }
 
 }
@@ -100,8 +118,8 @@ export class OESelectOptionComponent {
     }
 })
 export class OESelectComponent implements OnInit, AfterContentInit, AfterViewInit {
-    @ViewChildren(OESelectOptionComponent) dynamicArrayChildren: QueryList<OESelectOptionComponent>;
-    @ContentChildren(OESelectOptionComponent) manualChildren: QueryList<OESelectOptionComponent>;
+    @ViewChildren(OESelectOptionComponent) viewChildrenSource: QueryList<OESelectOptionComponent>;
+    @ContentChildren(OESelectOptionComponent) contentChildrenSource: QueryList<OESelectOptionComponent>;
     selectedText: string;
     @Input()
     placeHolder: string;
@@ -116,7 +134,8 @@ export class OESelectComponent implements OnInit, AfterContentInit, AfterViewIni
     @Input()
     stateBinding: string = 'selected';
     @Input()
-    allowMultiple: boolean;
+    allowMultiple: boolean = false;
+    @Input()
     selectorId: string;
 
     showItems: boolean;
@@ -127,52 +146,63 @@ export class OESelectComponent implements OnInit, AfterContentInit, AfterViewIni
     onItemDeselected: EventEmitter<any> = new EventEmitter<any>();
 
     constructor(private el: ElementRef, private selectService: OESelectService) {
-        this.selectorId = Utils.NewGuid();
         this.selectService.onItemSelected$.subscribe((item)=> {
             var scope = this;
             setTimeout(function () {
+                scope.validateSelections();
                 scope.onItemSelected.emit(item);
             }, 100);
-        })
+        });
+
         this.selectService.onItemRemoved$.subscribe((item)=> {
             var scope = this;
             setTimeout(function () {
+                scope.validateSelections();
                 scope.onItemDeselected.emit(item);
             }, 100);
         });
     }
 
     ngOnInit() {
+        if (!this.selectorId)
+            this.selectorId = Utils.NewGuid();
+
         this.selectService.registerSelector(this.selectorId, this.allowMultiple);
     }
 
     ngAfterViewInit() {
-        this.dynamicArrayChildren.forEach((item: OESelectOptionComponent)=> {
+        this.viewChildrenSource.forEach((item: OESelectOptionComponent)=> {
             this.configureChildOptionComponent(item);
         });
     }
 
     ngAfterContentInit() {
-        this.manualChildren.forEach((item: OESelectOptionComponent)=> {
+        this.contentChildrenSource.forEach((item: OESelectOptionComponent)=> {
             this.configureChildOptionComponent(item);
         });
     }
 
     configureChildOptionComponent(itemComponent: OESelectOptionComponent) {
         if (!itemComponent.item) {
-            itemComponent.item = {};
+            itemComponent.item = {uid: itemComponent.uid};
             itemComponent.valueBinding = this.valueBinding;
             itemComponent.textBinding = this.textBinding;
             itemComponent.stateBinding = this.stateBinding;
 
-            itemComponent.item[this.valueBinding] = itemComponent.value;
-            itemComponent.item[this.textBinding] = itemComponent.text;
-            itemComponent.item[this.stateBinding] = itemComponent.isSelected;
+            if (this.valueBinding)
+                itemComponent.item[this.valueBinding] = itemComponent.value;
+            if (this.textBinding)
+                itemComponent.item[this.textBinding] = itemComponent.text;
+            if (this.stateBinding)
+                itemComponent.item[this.stateBinding] = itemComponent.isSelected;
         }
         else {
-            itemComponent.value = itemComponent.item[this.valueBinding];
-            itemComponent.text = itemComponent.item[this.textBinding];
-            itemComponent.isSelected = itemComponent.item[this.stateBinding];
+            if (this.valueBinding)
+                itemComponent.value = itemComponent.item[this.valueBinding];
+            if (this.textBinding)
+                itemComponent.text = itemComponent.item[this.textBinding];
+            if (this.stateBinding)
+                itemComponent.isSelected = itemComponent.item[this.stateBinding];
         }
         itemComponent.selectorId = this.selectorId;
 
@@ -210,7 +240,7 @@ export class OESelectComponent implements OnInit, AfterContentInit, AfterViewIni
         return selectedItems;
     }
 
-    onItemToggled(event: any) {
+    validateSelections() {
         var selectedItems = this.selectService.getSelectedItems(this.selectorId);
         if (selectedItems && selectedItems.length) {
             if (!this.allowMultiple) {
@@ -218,8 +248,9 @@ export class OESelectComponent implements OnInit, AfterContentInit, AfterViewIni
                 this.close();
             }
             else {
-                if (selectedItems.length > 1)
+                if (selectedItems.length > 1) {
                     this.selectedText = "(multiple selected)";
+                }
                 else
                     this.selectedText = selectedItems[0].text || ' ';
             }

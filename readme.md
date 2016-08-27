@@ -1,9 +1,3 @@
-# Dropdown Component for Angular 2 (with Google Material 2)
-<img src="demo/screenshot1.png" width="350"/>
-<img src="demo/screenshot2.png" width="350"/>
-<img src="demo/screenshot3.png" width="350"/>
-
-
 ### Dependencies
 
 * Google Material (Angular Material 2) - MdInputModule, MdIconModule
@@ -46,6 +40,7 @@ the wrapper of the dropdown, equivalent to <select></select>
 | Property | value type | description |
 |---|---|---|
 | **items** | object array | defines an **array** of data items for the dropdown to use |
+| **selectorId** | string | definea the name of the current selector - a GUID will be populated as selectorId if it is not manually defined |
 | **selectedItems** | object array | returns a list of selected items (if it is a single item selection dropdown, it will have maximum 1 item in the returned array) |
 | **selectedText** | string | returns the current selected text; or the default placeholder text if no item selected |
 | **placeHolder** | string | defines the default placeholder for the dropdown |
@@ -87,6 +82,7 @@ the wrapper of the dropdown, equivalent to <select></select>
 ### <oe-option>
 option items of the dropdown, equivalent to <option></option>
 * NOTE: if all your data is loaded dynamically using the data items variable in <oe-select>, then you don't need to worry about using the <oe-option> which allows you to specify option items without a data load
+
 #### properties
 | Property | value type | description |
 |---|---|---|
