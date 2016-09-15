@@ -1,5 +1,6 @@
 <div class="oe-select__wrapper" [ngClass]="{'disabled':disabled}">
     <md-input placeholder="{{selectedText || placeHolder}}" [disabled]="disabled" class="oe-select-prime"
+              [ngClass]="{'selected': selectedText}"
               [floatingPlaceholder]="false"
               (click)="show()">
         <span md-suffix><md-icon>keyboard_arrow_down</md-icon></span>
@@ -9,7 +10,7 @@
             <ng-content select="oe-option"></ng-content>
             <oe-option *ngFor="let item of items" [item]="item" [value]="item[valueBinding]" [selectorId]="selectorId"
                        [isSelected]="item[stateBinding]" [text]="item[textBinding]"></oe-option>
-            <oe-option text="Clear" [isUnselectAllAction]="true"></oe-option>
+            <oe-option *ngIf="showDeselectAction" [isUnselectAllAction]="true"></oe-option>
         </md-card>
     </div>
 </div>

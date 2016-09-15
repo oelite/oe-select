@@ -9,6 +9,10 @@ oe-select {
         cursor: pointer;
         &.md-input-wrapper {
           margin: 0 !important;
+
+          .md-input-infix {
+            width: 100%;
+          }
         }
         color: md-color($md-light-theme-foreground, text) !important;
       }
@@ -47,8 +51,12 @@ oe-select {
           padding: 8px 14px;
           line-height: 24px;
           cursor: pointer;
-          &:hover, &.selected {
+          &:hover {
             background: md-color($md-light-theme-background, hover);
+          }
+          &.selected {
+            background: md-color($md-primary, default);
+            color: md-color($md-dark-theme-foreground, text);
           }
           &.actionBar {
             border-top: 1px solid rgba(black, 0.12);

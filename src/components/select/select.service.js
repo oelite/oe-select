@@ -10,21 +10,23 @@ var funcs_1 = require("../../utils/funcs");
 /**
  * Created by mleader1 on 23/08/2016.
  */
-var OESelectedItem = (function () {
-    function OESelectedItem(uid, value, text, item) {
-        this.uid = uid || funcs_1.Utils.NewGuid();
-        this.value = value || null;
+var OESelectItem = (function () {
+    function OESelectItem(value, selected, text, item) {
+        this.value = value;
+        this.selected = selected;
         this.item = item || null;
         this.text = text || null;
     }
-    return OESelectedItem;
+    return OESelectItem;
 }());
-exports.OESelectedItem = OESelectedItem;
+exports.OESelectItem = OESelectItem;
 var OESelectorState = (function () {
-    function OESelectorState(selectorId, selectedItems, allowMultipleSelect) {
+    function OESelectorState(selectorId, items, allowMultipleSelect, defaultEmptyPlaceholderText, defaultMultipleSelectionStateDisplayText) {
         this.selectorId = selectorId || funcs_1.Utils.NewGuid();
-        this.selectedItems = selectedItems || [];
+        this.items = items || [];
         this.allowMultipleSelect = allowMultipleSelect || false;
+        this.defaultEmptyPlaceholderText = defaultEmptyPlaceholderText || "";
+        this.defaultMultipleSelectionStateDisplayText = defaultMultipleSelectionStateDisplayText || "(multiple selected)";
     }
     return OESelectorState;
 }());
@@ -34,15 +36,17 @@ var OESelectService = (function () {
         this.selectors = [];
         this.onItemSelected$ = new core_1.EventEmitter();
         this.onItemRemoved$ = new core_1.EventEmitter();
+        this.onInitItemRegistered$ = new core_1.EventEmitter();
+        this.onSelectorDisplayTextUpdate$ = new core_1.EventEmitter();
     }
-    OESelectService.prototype.getSelectedItems = function (selectorId, itemUId) {
+    OESelectService.prototype.getSelectedItems = function (selectorId, itemValue) {
         if (selectorId) {
             var selector = this.getSelector(selectorId);
             if (selector) {
-                var matchedItems = selector.selectedItems;
-                if (itemUId)
-                    matchedItems = selector.selectedItems.filter(function (item) { return item.uid === itemUId; });
-                return matchedItems;
+                {
+                    var matchedItems = selector.items.filter(function (item) { return item.selected && (itemValue == null || itemValue === item.value); });
+                    return matchedItems;
+                }
             }
         }
         return null;
@@ -55,69 +59,112 @@ var OESelectService = (function () {
         }
         return null;
     };
-    OESelectService.prototype.registerSelector = function (selectorId, allowMultipleSelect, selectedItems) {
+    OESelectService.prototype.registerSelector = function (selectorId, allowMultipleSelect, items, emptySelectionPlaceholderText, defaultMultiSelectionText) {
         if (selectorId) {
-            var newSelector = new OESelectorState(selectorId, selectedItems, allowMultipleSelect);
+            var newSelector = new OESelectorState(selectorId, items, allowMultipleSelect, emptySelectionPlaceholderText, defaultMultiSelectionText);
             var selector = this.getSelector(selectorId);
             if (selector) {
-                console.warn('[OE Selector - Warning] a duplicated selector registration is identified - id:' + selectorId + "; it will now be overwritten.");
                 this.selectors[this.selectors.indexOf(selector)] = newSelector;
             }
             else {
                 this.selectors.push(newSelector);
             }
+            if (items && items.length) {
+                for (var _i = 0, items_1 = items; _i < items_1.length; _i++) {
+                    var item = items_1[_i];
+                    if (item.selected)
+                        this.onInitItemRegistered$.emit({ selectorId: selectorId, item: item });
+                }
+            }
         }
     };
-    OESelectService.prototype.registerSelectedItem = function (selectorId, uid, value, text, item) {
-        if (selectorId && uid) {
+    OESelectService.prototype.registerItem = function (selectorId, selected, value, text, item, ignoreSelectEmit) {
+        if (selectorId) {
             var selector = this.getSelector(selectorId);
             if (selector) {
-                var newItem = new OESelectedItem(uid, value, text, item);
-                var matches = selector.selectedItems.filter(function (item) { return item.uid === uid; });
-                if (!matches.length) {
-                    if (selector.allowMultipleSelect)
-                        selector.selectedItems.push(newItem);
-                    else {
-                        this.clearSelectorItems(selector);
-                        selector.selectedItems = [newItem];
+                var matches = selector.items.filter(function (item) { return item.value === value; });
+                var existingSelectedItems = this.getSelectedItems(selectorId);
+                if (matches.length) {
+                    var existingItem = matches[0];
+                    if (existingItem.text != text && text)
+                        existingItem.text = text;
+                    if (item != null)
+                        existingItem.item = item;
+                    //existingItem.text ==>  the first time component is instantiated there will be no 'text' value assigned so the test below indicates whether existingItem was first time initiated.
+                    if (existingItem.selected !== selected && selected === true && existingItem.text) {
+                        if (!selector.allowMultipleSelect && existingSelectedItems)
+                            for (var _i = 0, existingSelectedItems_1 = existingSelectedItems; _i < existingSelectedItems_1.length; _i++) {
+                                var existingSelectedItem = existingSelectedItems_1[_i];
+                                this.deselectItem(selectorId, existingSelectedItem.value, existingSelectedItem.text, existingSelectedItem.item);
+                            }
+                        existingItem.selected = true;
+                        if (!ignoreSelectEmit)
+                            this.onItemSelected$.emit({ selectorId: selectorId, item: existingItem });
                     }
+                    if (existingItem.selected)
+                        if (selector.allowMultipleSelect && existingSelectedItems && existingSelectedItems.length >= 2) {
+                            this.notifySelectorDisplayUpdate(selectorId, selector.defaultMultipleSelectionStateDisplayText);
+                        }
+                        else
+                            this.notifySelectorDisplayUpdate(selectorId, existingItem.text);
                 }
                 else {
-                    if (selector.allowMultipleSelect)
-                        selector.selectedItems[selector.selectedItems.indexOf(matches[0])] = newItem;
-                    else {
-                        this.clearSelectorItems(selector);
-                        selector.selectedItems = [newItem];
+                    var newItem = new OESelectItem(value, selected, text, item);
+                    if (selected === true) {
+                        if (!selector.allowMultipleSelect && existingSelectedItems)
+                            for (var _a = 0, existingSelectedItems_2 = existingSelectedItems; _a < existingSelectedItems_2.length; _a++) {
+                                var existingSelectedItem = existingSelectedItems_2[_a];
+                                this.deselectItem(selectorId, existingSelectedItem.value, existingSelectedItem.text, existingSelectedItem.item);
+                            }
+                        selector.items.push(newItem);
+                        if (!ignoreSelectEmit)
+                            this.onItemSelected$.emit({ selectorId: selectorId, item: newItem });
+                        if (selector.allowMultipleSelect && existingSelectedItems && existingSelectedItems.length >= 1) {
+                            this.notifySelectorDisplayUpdate(selectorId, selector.defaultMultipleSelectionStateDisplayText);
+                        }
+                        else
+                            this.notifySelectorDisplayUpdate(selectorId, newItem.text);
                     }
                 }
-                this.onItemSelected$.emit({ selectorId: selectorId, item: item });
             }
         }
     };
-    OESelectService.prototype.deregisterSelectedItem = function (selectorId, uid, value, text, item) {
-        if (selectorId && uid) {
+    OESelectService.prototype.notifySelectorDisplayUpdate = function (selectorId, displayText) {
+        this.onSelectorDisplayTextUpdate$.emit({ selectorId: selectorId, text: displayText });
+    };
+    OESelectService.prototype.deselectItem = function (selectorId, itemValue, text, item, ignoreSelectorDisplayUpdate) {
+        if (selectorId) {
             var selector = this.getSelector(selectorId);
             if (selector) {
-                var newItem = new OESelectedItem(uid, value, text, item);
-                var matches = selector.selectedItems.filter(function (item) { return item.uid === uid; });
-                if (!matches.length) {
-                    if (selector.allowMultipleSelect)
-                        selector.selectedItems.splice(selector.selectedItems.indexOf(matches[0]), 1);
-                    else
-                        this.clearSelectorItems(selector);
-                    this.onItemRemoved$.emit({ selectorId: selectorId, item: newItem });
+                var existingSelectedItems = this.getSelectedItems(selectorId, itemValue);
+                if (existingSelectedItems && existingSelectedItems.length) {
+                    var existingItem = existingSelectedItems[0];
+                    existingItem.selected = false;
+                    this.onItemRemoved$.emit({ selectorId: selectorId, item: existingItem });
+                    if (!ignoreSelectorDisplayUpdate) {
+                        if (selector.allowMultipleSelect) {
+                            var remainingSelectedItems = this.getSelectedItems(selectorId);
+                            if (remainingSelectedItems && remainingSelectedItems.length)
+                                this.notifySelectorDisplayUpdate(selector.selectorId, remainingSelectedItems.length == 1 ? remainingSelectedItems[0].text : selector.defaultMultipleSelectionStateDisplayText);
+                            else
+                                this.notifySelectorDisplayUpdate(selector.selectorId, selector.defaultEmptyPlaceholderText);
+                        }
+                        else
+                            this.notifySelectorDisplayUpdate(selector.selectorId, selector.defaultEmptyPlaceholderText);
+                    }
                 }
             }
         }
     };
-    OESelectService.prototype.clearSelectorItems = function (selector) {
+    OESelectService.prototype.clearSelectedItems = function (selector) {
         if (selector) {
-            var removeItems = selector.selectedItems;
-            selector.selectedItems = [];
-            for (var _i = 0, removeItems_1 = removeItems; _i < removeItems_1.length; _i++) {
-                var item = removeItems_1[_i];
-                this.onItemRemoved$.emit({ selectorId: selector.selectorId, item: item });
-            }
+            var removeItems = this.getSelectedItems(selector.selectorId);
+            if (removeItems)
+                for (var _i = 0, removeItems_1 = removeItems; _i < removeItems_1.length; _i++) {
+                    var item = removeItems_1[_i];
+                    this.deselectItem(selector.selectorId, item.value, item.text, item.item, true);
+                }
+            this.notifySelectorDisplayUpdate(selector.selectorId, selector.defaultEmptyPlaceholderText);
         }
     };
     OESelectService = __decorate([
